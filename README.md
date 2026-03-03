@@ -1,9 +1,16 @@
 # GlanceAt OLED Template
-GlanceAt OLED provides a clean, always-on dashboard for your desk, wall, or workspace — powered by ESPHome and Home Assistant.
 
----
+GlanceAt OLED is a 256x64 OLED Home Assistant display firmware designed to provide a clean, always-on dashboard for your desk, wall, or workspace.
 
-The template has a number of built in features that can be setup, however you can customise it via espHome. 
+
+## Table of Contents
+
+- [Features](#features)
+- [Hardware](#hardware)
+- [Quick Start](#quick-start)
+- [Weather Setup](#weather-setup)
+- [Calendar Setup](#calendar-setup)
+- [Notifications](#notifications)
 
 ## Template Features
 -  Clock with seconds and full date
@@ -18,7 +25,7 @@ The template has a number of built in features that can be setup, however you ca
 ## Hardware
 
 Designed for:
-- ESP32-S3 (WROOM-1 recommended)
+- ESP32-S3-WROOM-1
 - SSD1322 256x64 OLED display (SPI)
 
 ---

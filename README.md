@@ -12,6 +12,8 @@ GlanceAt OLED is a 256x64 OLED Home Assistant display firmware designed to provi
 - [Calendar Setup](#calendar-setup)
 - [Notifications](#notifications)
 
+---
+
 ## Template Features
 -  Clock with seconds and full date
 -  Weather display (configurable weather entity)
@@ -71,5 +73,19 @@ To configure:
 
 You can trigger a notification overlay from home assistant using the service
 esphome.glanceat_oled_show_notification. 
+
+For example:
+
+alias: Notify GlanceAt When Door Opens
+trigger:
+  - platform: state
+    entity_id: binary_sensor.front_door
+    to: "on"
+
+action:
+  - service: esphome.glanceat_oled_show_notification
+    data:
+      message: "Front Door Opened"
+      duration_ms: 5000
 
 

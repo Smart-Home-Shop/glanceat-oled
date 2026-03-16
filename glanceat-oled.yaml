@@ -34,9 +34,6 @@ esp32:
 logger:
 
 api:
-  encryption:
-    key: !secret api_key
-
   services:
     - service: show_notification
       variables:
@@ -55,11 +52,8 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
   ap:
     ssid: "${device_name} Fallback"
     password: "glanceat"

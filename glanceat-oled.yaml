@@ -107,6 +107,25 @@ display:
     rotation: 180
     update_interval: never
     lambda: |-
+
+      if (!wifi::global_wifi_component->is_connected()) {
+
+        it.fill(COLOR_OFF);
+
+        // Title
+        it.printf(128, 12, id(font_medium), TextAlign::CENTER, "WiFi Setup");
+
+        // SSID
+        it.printf(128, 32, id(font_small), TextAlign::CENTER,
+          "${device_name} Fallback");
+
+        // Password
+        it.printf(128, 52, id(font_small), TextAlign::CENTER,
+          "Password: glanceat");
+
+        return;
+      }
+
       render_template(it);
 
 select:

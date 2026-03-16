@@ -1,0 +1,42 @@
+substitutions:
+  device_name: glanceat-oled
+  friendly_name: "GlanceAt OLED"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: "YOUR_WIFI"
+  password: "YOUR_PASSWORD"
+
+spi:
+  clk_pin: GPIO35
+  mosi_pin: GPIO1
+
+display:
+  - platform: ssd1322_spi
+    model: "SSD1322 256x64"
+    cs_pin: GPIO13
+    dc_pin: GPIO11
+    reset_pin: GPIO12
+    rotation: 180
+    lambda: |-
+      it.print(10, 20, id(font_large), "GlanceAt Ready");
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 24

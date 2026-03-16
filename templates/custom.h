@@ -5,8 +5,11 @@
 // -----------------------------------------------------
 //  This file is safe to edit.
 //  You can customise the display here.
-//  It will not be overwritten during updates.
 //
+//  Nothing in this file will be overwritten during
+//  firmware updates.
+//
+//  The function below runs every display refresh.
 // =====================================================
 
 void render_custom(display::Display &it) {
@@ -21,33 +24,38 @@ void render_custom(display::Display &it) {
   constexpr int MESSAGE_Y = 40;
 
   // ==============================
-  // Title
+  // Default content
   // ==============================
-  it.printf(128, TITLE_Y,
-            &id(font_medium),
-            TextAlign::TOP_CENTER,
-            "Custom Template");
 
-  // Divider
+  it.printf(
+    128, TITLE_Y,
+    &id(font_medium),
+    TextAlign::TOP_CENTER,
+    "Custom Template"
+  );
+
   it.line(40, LINE_Y, 215, LINE_Y, COLOR_ON);
 
-  // ==============================
-  // Instruction
-  // ==============================
-  it.printf(128, MESSAGE_Y,
-            &id(font_small),
-            TextAlign::TOP_CENTER,
-            "Edit custom.h");
+  it.printf(
+    128, MESSAGE_Y,
+    &id(font_small),
+    TextAlign::TOP_CENTER,
+    "Edit custom.h"
+  );
+
+  // ==================================================
+  // Add your own display code.
+  // Example:
+  //
+  // if (id(weather_temp).has_state()) {
+  //   it.printf(
+  //     128, 52,
+  //     &id(font_small),
+  //     TextAlign::TOP_CENTER,
+  //     "%.0f °C",
+  //     id(weather_temp).state
+  //   );
+  // }
+  // ==================================================
 
 }
-
-// Example code: show temperature if available
-/*
-if (id(weather_temperature).has_state()) {
-  it.printf(128, 52,
-            &id(font_small),
-            TextAlign::TOP_CENTER,
-            "%.0f °C",
-            id(weather_temperature).state);
-}
-*/

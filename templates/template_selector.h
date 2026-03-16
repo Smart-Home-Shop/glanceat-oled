@@ -16,8 +16,6 @@ static bool render_notification_overlay(display::Display &it) {
   unsigned long elapsed = millis() - id(notification_started_ms);
 
   unsigned long duration = id(notification_duration_ms);
-  if (duration < 3000) duration = 3000;
-  if (duration > 10000) duration = 10000;
 
   if (elapsed > duration) {
     id(notification_active) = false;

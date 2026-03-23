@@ -8,11 +8,6 @@ substitutions:
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
-  includes:
-    - templates/template_selector.h
-    - templates/clock_weather.h
-    - templates/calendar.h
-    - templates/custom.h
   on_boot:
     priority: 600
     then:
@@ -56,7 +51,7 @@ ota:
 wifi:
   ap:
     ssid: "${device_name} Fallback"
-    password: "glanceat"
+    password: "GlanceAt"
 
 captive_portal:
 
@@ -107,26 +102,418 @@ display:
     rotation: 180
     update_interval: never
     lambda: |-
+      // ======================================================
+      // Helper: format weather condition
+      // ======================================================
+      auto format_weather_condition = [](const std::string &condition) -> const char* {
+        if (condition == "clear-night") return "Clear Night";
+        if (condition == "cloudy") return "Cloudy";
+        if (condition == "exceptional") return "Exceptional";
+        if (condition == "fog") return "Fog";
+        if (condition == "hail") return "Hail";
+        if (condition == "lightning") return "Thunderstorm";
+        if (condition == "lightning-rainy") return "Thunderstorm";
+        if (condition == "partlycloudy") return "Partly Cloudy";
+        if (condition == "pouring") return "Heavy Rain";
+        if (condition == "rainy") return "Rain";
+        if (condition == "snowy") return "Snow";
+        if (condition == "snowy-rainy") return "Sleet";
+        if (condition == "sunny") return "Sunny";
+        if (condition == "windy") return "Windy";
+        if (condition == "windy-variant") return "Windy";
 
+        if (!condition.empty()) {
+          static std::string formatted;
+          formatted = condition;
+          formatted[0] = toupper(formatted[0]);
+          return formatted.c_str();
+        }
+
+        return "";
+      };
+
+      // ======================================================
+      // WiFi setup screen
+      // ======================================================
       if (!wifi::global_wifi_component->is_connected()) {
-
         it.fill(COLOR_OFF);
 
-        // Title
-        it.printf(128, 12, id(font_medium), TextAlign::CENTER, "WiFi Setup");
+        it.printf(
+          128, 12,
+          id(font_medium),
+          TextAlign::CENTER,
+          "WiFi Setup"
+        );
 
-        // SSID
-        it.printf(128, 32, id(font_small), TextAlign::CENTER,
-          "${device_name} Fallback");
+        it.printf(
+          128, 32,
+          id(font_small),
+          TextAlign::CENTER,
+          "${device_name} Fallback"
+        );
 
-        // Password
-        it.printf(128, 52, id(font_small), TextAlign::CENTER,
-          "Password: glanceat");
+        it.printf(
+          128, 52,
+          id(font_small),
+          TextAlign::CENTER,
+          "Password: GlanceAt"
+        );
 
         return;
       }
 
-      render_template(it);
+      // ======================================================
+      // Global notification overlay
+      // ======================================================
+      if (id(notification_active)) {
+        unsigned long elapsed = millis() - id(notification_started_ms);
+        unsigned long duration = id(notification_duration_ms);
+
+        if (elapsed > duration) {
+          id(notification_active) = false;
+        } else {
+          it.fill(COLOR_OFF);
+
+          const std::string msg = id(notification_text);
+          const size_t max_len = 38;
+
+          std::string line1;
+          std::string line2;
+
+          if (msg.length() <= max_len) {
+            line1 = msg;
+          } else {
+            size_t split = msg.rfind(' ', max_len);
+            if (split == std::string::npos) split = max_len;
+
+            line1 = msg.substr(0, split);
+            line2 = msg.substr(split + 1);
+
+            if (line2.length() > max_len - 3) {
+              line2 = line2.substr(0, max_len - 3) + "...";
+            }
+          }
+
+          it.printf(
+            128, 4,
+            id(font_small),
+            TextAlign::TOP_CENTER,
+            "Notification"
+          );
+
+          it.line(40, 18, 215, 18, COLOR_ON);
+
+          it.printf(
+            128, 26,
+            id(font_small),
+            TextAlign::TOP_CENTER,
+            "%s",
+            line1.c_str()
+          );
+
+          if (!line2.empty()) {
+            it.printf(
+              128, 40,
+              id(font_small),
+              TextAlign::TOP_CENTER,
+              "%s",
+              line2.c_str()
+            );
+          }
+
+          return;
+        }
+      }
+
+      // ======================================================
+      // Template selector
+      // 0 = Clock and Weather
+      // 1 = Calendar
+      // 2 = Custom
+      // ======================================================
+
+      // ======================================================
+      // Template 2: Custom
+      // ======================================================
+      if (id(active_template) == 2) {
+        it.fill(COLOR_OFF);
+
+        constexpr int TITLE_Y   = 12;
+        constexpr int LINE_Y    = 30;
+        constexpr int MESSAGE_Y = 40;
+
+        it.printf(
+          128, TITLE_Y,
+          id(font_medium),
+          TextAlign::TOP_CENTER,
+          "Custom Template"
+        );
+
+        it.line(40, LINE_Y, 215, LINE_Y, COLOR_ON);
+
+        it.printf(
+          128, MESSAGE_Y,
+          id(font_small),
+          TextAlign::TOP_CENTER,
+          "Edit custom section"
+        );
+
+        // Example:
+        // if (id(weather_temp).has_state()) {
+        //   it.printf(
+        //     128, 52,
+        //     id(font_small),
+        //     TextAlign::TOP_CENTER,
+        //     "%.0f °C",
+        //     id(weather_temp).state
+        //   );
+        // }
+
+        return;
+      }
+
+      // ======================================================
+      // Template 1: Calendar
+      // ======================================================
+      if (id(active_template) == 1) {
+        it.fill(COLOR_OFF);
+
+        const auto now = id(sntp_time).now();
+
+        // Clock (top left)
+        it.strftime(
+          1, 1,
+          id(font_small),
+          TextAlign::TOP_LEFT,
+          "%H:%M",
+          now
+        );
+
+        // Validate calendar data
+        if (!id(cal_next_title).has_state() ||
+            !id(cal_next_start).has_state() ||
+            !id(cal_next_end).has_state()) {
+
+          it.printf(
+            128, 32,
+            id(font_small),
+            TextAlign::CENTER,
+            "Calendar not configured"
+          );
+
+          return;
+        }
+
+        const std::string &start_str_full = id(cal_next_start).state;
+        const std::string &end_str_full   = id(cal_next_end).state;
+
+        if (start_str_full == "unknown" ||
+            start_str_full == "unavailable" ||
+            end_str_full == "unknown" ||
+            end_str_full == "unavailable") {
+
+          it.printf(
+            128, 32,
+            id(font_small),
+            TextAlign::CENTER,
+            "No upcoming events"
+          );
+
+          return;
+        }
+
+        if (start_str_full.length() < 19 ||
+            end_str_full.length() < 19) {
+          return;
+        }
+
+        // Parse start time
+        ESPTime start_time = now;
+
+        start_time.year         = atoi(start_str_full.substr(0, 4).c_str());
+        start_time.month        = atoi(start_str_full.substr(5, 2).c_str());
+        start_time.day_of_month = atoi(start_str_full.substr(8, 2).c_str());
+        start_time.hour         = atoi(start_str_full.substr(11, 2).c_str());
+        start_time.minute       = atoi(start_str_full.substr(14, 2).c_str());
+        start_time.second       = atoi(start_str_full.substr(17, 2).c_str());
+
+        start_time.recalc_timestamp_local();
+
+        // Parse end time
+        ESPTime end_time = start_time;
+
+        end_time.hour   = atoi(end_str_full.substr(11, 2).c_str());
+        end_time.minute = atoi(end_str_full.substr(14, 2).c_str());
+        end_time.second = atoi(end_str_full.substr(17, 2).c_str());
+
+        end_time.recalc_timestamp_local();
+
+        const time_t now_ts   = now.timestamp;
+        const time_t start_ts = start_time.timestamp;
+        const time_t end_ts   = end_time.timestamp;
+
+        const bool event_active = (now_ts >= start_ts && now_ts < end_ts);
+
+        // Calculate day difference
+        ESPTime now_midnight = now;
+        now_midnight.hour = 0;
+        now_midnight.minute = 0;
+        now_midnight.second = 0;
+        now_midnight.recalc_timestamp_local();
+
+        ESPTime start_midnight = start_time;
+        start_midnight.hour = 0;
+        start_midnight.minute = 0;
+        start_midnight.second = 0;
+        start_midnight.recalc_timestamp_local();
+
+        int day_diff =
+          (start_midnight.timestamp - now_midnight.timestamp) / 86400;
+
+        // Determine day label
+        char day_label[16];
+
+        if (day_diff == 0) {
+          strcpy(day_label, "Today");
+        } else if (day_diff == 1) {
+          strcpy(day_label, "Tomorrow");
+        } else if (day_diff > 1) {
+          static const char* months[] = {
+            "Jan","Feb","Mar","Apr","May","Jun",
+            "Jul","Aug","Sep","Oct","Nov","Dec"
+          };
+
+          snprintf(
+            day_label,
+            sizeof(day_label),
+            "%02d %s",
+            start_time.day_of_month,
+            months[start_time.month - 1]
+          );
+        } else {
+          it.printf(
+            128, 32,
+            id(font_small),
+            TextAlign::CENTER,
+            "No upcoming events"
+          );
+
+          return;
+        }
+
+        // Title truncate
+        const std::string &title_src = id(cal_next_title).state;
+        char title[32];
+
+        if (title_src.length() > 28) {
+          snprintf(title, sizeof(title), "%.25s...", title_src.c_str());
+        } else {
+          snprintf(title, sizeof(title), "%s", title_src.c_str());
+        }
+
+        // Layout
+        constexpr int TITLE_Y  = 14;
+        constexpr int LINE_Y   = 34;
+        constexpr int STATUS_Y = 36;
+        constexpr int META_Y   = 50;
+
+        it.printf(
+          128, TITLE_Y,
+          id(font_medium),
+          TextAlign::TOP_CENTER,
+          "%s",
+          title
+        );
+
+        it.line(12, LINE_Y, 242, LINE_Y, COLOR_ON);
+
+        it.printf(
+          128, STATUS_Y,
+          id(font_tiny),
+          TextAlign::TOP_CENTER,
+          event_active ? "NOW" : "UPCOMING"
+        );
+
+        it.printf(
+          128, META_Y,
+          id(font_small),
+          TextAlign::TOP_CENTER,
+          "%s  •  %02d:%02d-%02d:%02d",
+          day_label,
+          start_time.hour,
+          start_time.minute,
+          end_time.hour,
+          end_time.minute
+        );
+
+        return;
+      }
+
+      // ======================================================
+      // Template 0 (default): Clock and Weather
+      // ======================================================
+      it.fill(COLOR_OFF);
+
+      auto now = id(sntp_time).now();
+
+      // Time
+      it.strftime(
+        128, 0,
+        id(font_large),
+        TextAlign::TOP_CENTER,
+        "%H:%M",
+        now
+      );
+
+      // Date
+      it.strftime(
+        128, 26,
+        id(font_small),
+        TextAlign::TOP_CENTER,
+        "%A, %d %B %Y",
+        now
+      );
+
+      // Divider
+      it.line(36, 42, 220, 42, COLOR_ON);
+
+      // Validate weather data
+      if (!id(weather_state).has_state() ||
+          !id(weather_temp).has_state() ||
+          id(weather_state).state == "unknown" ||
+          id(weather_state).state == "unavailable") {
+
+        it.printf(
+          128, 48,
+          id(font_small),
+          TextAlign::TOP_CENTER,
+          "Weather not configured"
+        );
+
+        return;
+      }
+
+      const std::string &state = id(weather_state).state;
+      const char* condition = format_weather_condition(state);
+      float temperature = id(weather_temp).state;
+
+      // Temperature (left)
+      it.printf(
+        36, 48,
+        id(font_small),
+        TextAlign::TOP_LEFT,
+        "%.0f °C",
+        temperature
+      );
+
+      // Condition (right)
+      it.printf(
+        220, 48,
+        id(font_small),
+        TextAlign::TOP_RIGHT,
+        "%s",
+        condition
+      );
 
 select:
   - platform: template
